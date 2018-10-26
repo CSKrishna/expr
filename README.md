@@ -219,6 +219,7 @@ tensorboard --logdir=$MODEL_DIR
 ```
 ## Results and Curves
 It  is also possible to log data to generate important graphs such as the PR-curve and the AUC curve. This data can easily be exported to a plotting tool to generate the requisite curves.
+## <img src="image04.png" />
 
 
 
