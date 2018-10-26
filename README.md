@@ -94,7 +94,7 @@ count(distinct corridor) as num_unq_corridors
 from ml.deep_features
 ```
 
-### Weights
+### Weights for Class Imbalance
 To deal with severe class imbalance in our dataset, we compute the ratio of ‘fraud’ to ‘non-fraud’. We use this ratio to up weight fraud instances in the dataset and down weight ‘non-fraud’ instances. This weight column must be appended to the dataset so that the training template can use these weights to implement weighting while computing the loss function.
 
 ### Data Parsing
@@ -126,7 +126,7 @@ EVAL_FILES=gs://${BUCKET}/deep_features_noheader/deep_features_eval-*.csv
 The template then uses tf.data to progressively load data into memory, parse it, apply additional transformation steps, and create batches of the appropriate shape to be passed on to GPUs for implementing the forwardprop/brackprop operations during training. 
 The boilerplate associated with efficient data loading including buffering in memory, shuffling of data, and pre-fetching to avoid GPU starvation has been abstracted away.
 
-## Submitting training jobs locally
+## Local Training
 Run the loca-run.sh script to launch from the bash to launch a local training job. 
 
 The necessary parameters are path to the training and datasets, and specification of a directory for the model. After the training job is launched, model checkpoints and event files (required to monitor training and evaluation using Tensorboard) are persisted in this directory.
