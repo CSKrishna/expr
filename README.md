@@ -102,3 +102,79 @@ We also need to collect the following metadata to enable parsing of data during 
  *Number of features for high cardinality categorical features
  *Mean and Standard Deviation for numerical features
 
+### Weights
+To deal with severe class imbalance in our dataset, we compute the ratio of ‘fraud’ to ‘non-fraud’. We use this ratio to up weight fraud instances in the dataset and down weight ‘non-fraud’ instances. This weight column must be appended to the dataset so that the training template can use these weights to implement weighting while computing the loss function.
+
+### Data Parsing
+The Cloud MLE template provides hooks in training/metadata.py to register the meta-data in the training template to enable data-parsing, and batch creation. 
+For high cardinality features such as corridor which has 25000 codes, it is impractical to explicitly register the category set in the training pipeline. A workaround is to register such features using hash buckets, like so:
+
+```
+INPUT_CATEGORICAL_FEATURE_NAMES_WITH_HASH_BUCKET = {
+    'corridor': 100000,
+    'corr_cross_tran_bin': 17000000    
+}
+```
+Here, we are telling the model to create a hash bucket of size100000 for the corridor feature. The recommended practice is for the hash bucket size to be much bigger than the feature’s cardinality.
+The template also provides hooks to create additional features based on feature crosses, bin numerical features if their values don’t have meaningful magnitude, and finally, implement additional feature transformations such as feature scaling. 
+
+## Data Ingestion
+The template is configured such it can deal with datasets stored locally or on Google Cloud Storage. To register the data source, simply specify the local path in local_run.sh 
+
+```
+TRAIN_FILES=/home/jupyter/data/deep_features/noHeaders/deep_features_train-*.csv
+VALID_FILES=/home/jupyter/data/deep_features/noHeaders/deep_features_eval-*.csv
+```
+or the path in GCS:
+
+```
+TRAIN_FILES=gs://${BUCKET}/deep_features_noheader/deep_features_train-*.csv
+EVAL_FILES=gs://${BUCKET}/deep_features_noheader/deep_features_eval-*.csv
+```
+
+The template then uses tf.data to progressively load data into memory, parse it, apply additional transformation steps, and create batches of the appropriate shape to be passed on to GPUs for implementing the forwardprop/brackprop operations during training. 
+The boilerplate associated with efficient data loading including buffering in memory, shuffling of data, and pre-fetching to avoid GPU starvation has been abstracted away.
+
+## Submitting training jobs locally
+Run the loca-run.sh script to launch from the bash to launch a local training job. 
+```
+sh local_run.sh
+```
+The necessary parameters are path to the training and datasets, and specification of a directory for the model. After the training job is launched, model checkpoints and event files (required to monitor training and evaluation using Tensorboard) are persisted in this directory.
+
+The user can also specify other key parameters that impact model architecture (number of layers, number of hidden units per layer), hyperparameters (learning rate, dropout, batch size), and training specs (size of training data, number of epochs to run, batch-size). All these parameters also come with robust defaults.
+
+## Distributed Training
+To launch distributed training on Cloud MLE, run the following from the bash:
+```
+sh distributed_run.sh
+```
+The cluster configuration needs to be specified in config.yml which is picked up by distributed_run.sh.
+
+```
+trainingInput:
+  #scaleTier: BASIC # BASIC | BASIC_GPU | STANDARD_1 | PREMIUM_1
+  scaleTier: CUSTOM
+  masterType: complex_model_m_gpu
+  workerType: complex_model_m_gpu
+  parameterServerType: complex_model_m_gpu
+  workerCount: 4
+  parameterServerCount: 1
+```
+Cloud MLE takes care of launching the cluster as per the specified configuration and executing distributed training. Under the hood, Cloud MLE implements state of the art practices – the ring reduce algorithm for efficiently disseminating gradient information across worker nodes, efficient communication between disk and compute during data ingestion, model checkpointing etc.
+This complexity of managing distributed training including setting up and launching a cluster is thus completely abstracted away and the user can focus on reasoning about the optimal cluster configuration including the underlying hardware by trading off time against computing cost.
+
+The speedup of a launching a distributed training job vs a local training job can be substantial as the training data size increases. The speedup for training a dataset of size 5.64 GB (43 million records) is shown below:
+
+| Training Mode       | Hard Ware Specs           |Training Time for 2 epochs (minutes)  |
+| ------------- |:-------------:| -----:|
+| Local Training with Cloud MLE     | Machine type
+n1-highmem-16 (16 vCPUs, 104 GB memory)
+CPU platform
+Intel Haswell
+GPUs
+2 x NVIDIA Tesla K80
+ | ~198 minutes |
+| Distributed Training with Cloud MLE    | 1 Parameter Server, 4 Workers
+All instances of type: complex_model_m_gpu
+    |   63 minutes including ~20 minutes for cluster set up |
