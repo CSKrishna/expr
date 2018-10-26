@@ -170,3 +170,46 @@ The speedup of a launching a distributed training job vs a local training job ca
 | ------------- |:-------------:| -----:|
 | Local Training with Cloud MLE     | Machine type n1-highmem-16 (16 vCPUs, 104 GB memory) CPU platform Intel Haswell GPUs 2 x NVIDIA Tesla K80 | ~198 minutes |
 | Distributed Training with Cloud MLE    | 1 Parameter Server, 4 Workers All instances of type: complex_model_m_gpu|   63 minutes including ~20 minutes for cluster set up |
+
+## Hyperparameter tuning
+Finally, Cloud MLE provides very good support for launching many training jobs in sequence or in parallel depending on the metalearning algorithm to tune the specified set of hyperparameters to develop the best trained model.
+To do so, we need to specify the set of hyperparameters to tune, the ranges to explore for them, the exploration scale (log or linear).
+This is specified in the config_hyperparam.yaml file.
+```
+trainingInput:
+  #scaleTier: BASIC # BASIC | BASIC_GPU | STANDARD_1 | PREMIUM_1
+  scaleTier: CUSTOM
+  masterType: complex_model_m_gpu
+  workerType: complex_model_m_gpu
+  parameterServerType: complex_model_m_gpu
+  workerCount: 4
+  parameterServerCount: 1
+  hyperparameters:
+    goal: MAXIMIZE
+    hyperparameterMetricTag: auc_precision_recall
+    maxTrials: 6
+    maxParallelTrials: 1
+    enableTrialEarlyStopping: True
+    params:
+    - parameterName: learning-rate
+      type: DOUBLE
+      minValue: 0.0001
+      maxValue: 0.1
+      scaleType: UNIT_LOG_SCALE
+  ```
+The shell script references this file and can run from bash to launch model training cum hyperaparameter tuning.
+
+As long as the hyperparameters have been defined in trainer/task.py under def initialise_hyper_params(), Cloud MLE will be able to pick them up and tune them.
+
+    
+## Training Monitoring and Results:
+Training and evaluation data is logged in events files. It suffices to launch Tensorboard and point it to the directory containing the events files, (in our case, the model directory), like so:
+```
+tensorboard --logdir=$MODEL_DIR
+```
+## Results and Curves
+It  is also possible to log data to generate important graphs such as the PR-curve and the AUC curve. This data can easily be exported to a plotting tool to generate the requisite curves.
+
+
+
+
