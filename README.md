@@ -84,7 +84,7 @@ We also need to collect the following metadata to enable parsing of data during 
  * Number of features for high cardinality categorical features
  * Mean and Standard Deviation for numerical features
 
-We generate this statistics using BQ. An illustrative query to compute the cardinality of a feature is shown below:
+We generate these statistics using BQ. An illustrative query to compute the cardinality of a feature is shown below:
 
 ```
 %%time
@@ -95,11 +95,10 @@ from ml.deep_features
 ```
 
 ### Weights for Class Imbalance
-To deal with severe class imbalance in our dataset, we compute the ratio of ‘fraud’ to ‘non-fraud’. We use this ratio to up weight fraud instances in the dataset and down weight ‘non-fraud’ instances. This weight column must be appended to the dataset so that the training template can use these weights to implement weighting while computing the loss function.
+To deal with severe class imbalance, we compute the ratio of ‘fraud’ to ‘non-fraud’ instances. We use this ratio to up weight fraud instances in the dataset and down weight ‘non-fraud’ instances. This weight column must be appended to the dataset so that the training template can implement weighting while computing the loss function.
 
 ### Data Parsing
-The Cloud MLE template provides hooks in training/metadata.py to register the meta-data in the training template to enable data-parsing, and batch creation. 
-For high cardinality features such as corridor which has 25000 codes, it is impractical to explicitly register the category set in metadata.pyy. A workaround is to register such features using hash buckets, like so:
+The Cloud MLE template provides hooks in training/metadata.py to register the meta-data in the training template to enable data-parsing, and batch creation. For high cardinality features such as corridor which has 25000 codes, it is impractical to explicitly register the category set in metadata.pyy. A workaround is to register such features using hash buckets, like so:
 
 ```
 INPUT_CATEGORICAL_FEATURE_NAMES_WITH_HASH_BUCKET = {
