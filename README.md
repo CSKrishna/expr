@@ -58,8 +58,47 @@ The code-base is organized as follows:
 The training and evaluation datasets are prepared in BQ. Features are created based on business rules currently in use for detecting fraud, and judgement. We provide an illustrative query for preparing the training data set, which could be further split into training and eval datasets:
 
 ```
-BUCKET=gs://recommender_$GOOGLE_CLOUD_PROJECT
-gsutil mb ${BUCKET}
-bq mk GA360_MerchStore
-cd gcp-retail-workshop-2018/recommender
+%%time
+%%bigquery
+create TABLE ml.deep_features
+as
+SELECT
+actual_fraud AS label,
+CONCAT(case when send_cntry_code is not null then send_cntry_code else "" end ,
+     "-",
+     case when recv_cntry_code is not null then recv_cntry_code else "" end ) as corridor,
+tran_amt_bin,
+corr_cross_tran_bin,
+sender_age_group,
+receiver_age_group,
+time_span_secs,
+complained_fraud_last_5_for_sender,
+complained_fraud_last_5_for_receiver,
+prevented_fraud_last_5_for_sender,
+prevented_fraud_last_5_for_receiver,        
+txn_count_last_5_for_sender,
+txn_count_last_5_for_receiver,  
+send_recv_have_same_last_name,
+unq_recs_last_5_for_sender,
+unq_senders_last_5_for_receiver,
+unq_agents_last_5_for_sender,
+unq_agents_last_5_for_receiver,
+unq_recv_cntry_last_5_for_sender,
+unq_send_cntry_last_5_for_receiver
+FROM
+  ml.features
 ```
+The table can then be exported to Google Cloud Storage where the files are sharded or downloaded to local storage
+
+```
+TRAIN_FILE=$BUCKET/deep_features_noheader/deep_features_train.csv
+bq extract ml.deep_features_train $TRAIN_FILE
+```
+
+### Metadata Collection
+We also need to collect the following metadata to enable parsing of data during and feature scaling for numerical features during training:
+ *Type of feature – numerical, categorical 
+ *Category set for categorical features low high cardinality
+ *Number of features for high cardinality categorical features
+ *Mean and Standard Deviation for numerical features
+
