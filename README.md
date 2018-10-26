@@ -168,13 +168,5 @@ The speedup of a launching a distributed training job vs a local training job ca
 
 | Training Mode       | Hard Ware Specs           |Training Time for 2 epochs (minutes)  |
 | ------------- |:-------------:| -----:|
-| Local Training with Cloud MLE     | Machine type
-n1-highmem-16 (16 vCPUs, 104 GB memory)
-CPU platform
-Intel Haswell
-GPUs
-2 x NVIDIA Tesla K80
- | ~198 minutes |
-| Distributed Training with Cloud MLE    | 1 Parameter Server, 4 Workers
-All instances of type: complex_model_m_gpu
-    |   63 minutes including ~20 minutes for cluster set up |
+| Local Training with Cloud MLE     | Machine type n1-highmem-16 (16 vCPUs, 104 GB memory) CPU platform Intel Haswell GPUs 2 x NVIDIA Tesla K80 | ~198 minutes |
+| Distributed Training with Cloud MLE    | 1 Parameter Server, 4 Workers All instances of type: complex_model_m_gpu|   63 minutes including ~20 minutes for cluster set up |
